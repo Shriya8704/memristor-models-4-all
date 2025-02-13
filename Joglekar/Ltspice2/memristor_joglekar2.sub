@@ -1,34 +1,55 @@
-* HP Memristor SPICE Model Using Joglekar Window
+***********************************************
+* HP Memristor SPICE Model
+* For Transient Analysis only
+* created by Zdenek and Dalibor Biolek
+***********************************************
+* Ron, Roff - Resistance in ON / OFF States
+*
+* Rinit - Resistance at T=0
+*
+* D - Width of the thin film
+*
+* uv - Migration coefficient
+*
+* p - Parameter of the WINDOW-function for
+*     modeling nonlinear boundary conditions
+*
+* x - W/D Ratio, W is the actual width
+*     of the doped area (from 0 to D)
+*
+***********************************************
+.SUBCKT memristor plus minus PARAMS:
++ Ron=100 Roff=16K Rinit=11K D=10N uv=10F p=1
 
-* Connections:
-* TE:  Top electrode
-* BE:  Bottom electrode
-* XSV: External connection to plot state variable
-*      that is not used otherwise
+***********************************************
+* DIFFERENTIAL EQUATION MODELING *
+***********************************************
+Gx 0 x value={I(Emem)*uv*Ron/D**2*f(V(x),p)}
+Cx x 0 1 IC={(Roff-Rinit)/(Roff-Ron)}
+Raux x 0 1000000
 
-.SUBCKT MEM_JOGLEKAR TE BE XSV 
+***********************************************
+* RESISTIVE PORT OF THE MEMRISTOR *
+***********************************************
+Emem plus aux value={-I(Emem)*V(x)*(Roff-Ron)}
+Roff aux minus {Roff}
 
-* Ron: Minimum device resistance
-* Roff: Maximum device resistance
-* D:   Width of the thin film
-* uv:  Dopant mobility
-* p:   Parameter for window function
-* x0:   State variable initial value
+***********************************************
+* FLUX COMPUTATION *
+***********************************************
+Eflux flux 0 value={SDT(V(plus,minus))}
 
-.params Ron=100 Roff=10K x0=.56 D=12N uv=50F p=7
+***********************************************
+* CHARGE COMPUTATION *
+***********************************************
+Echarge charge 0 value={SDT(I(Emem))}
 
-* Joglekar Window Function
-.func f(V1) = 1-pow((2*V1-1),(2*p))
+***********************************************
+* WINDOW FUNCTIONS
+* FOR NONLINEAR DRIFT MODELING *
+***********************************************
+* window function, according to Joglekar
+.func f(x,p)={1-(2*x-1)**(2*p)}
 
-* Memristor I-V Relationship
-.func IVRel(V1,V2) = V1/(Ron*V2 + Roff*(1-V2))
+.ENDS memristor
 
-* Circuit to determine state variable
-Gx 0 XSV value={ I(Gmem)*Ron*uv*f(V(XSV,0))/pow(D,2) }
-Cx XSV 0 {1}
-.ic V(XSV) = x0
-
-* Current source representing memristor
-Gmem TE BE value={IVRel(V(TE,BE),V(XSV,0))}
-
-.ENDS MEM_JOGLEKAR
