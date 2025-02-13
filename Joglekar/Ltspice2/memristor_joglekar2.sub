@@ -1,34 +1,24 @@
-* HP Memristor SPICE Model Using Joglekar Window
+* Memristor Model using Joglekar Window Function
+* Created for LTSpice
 
-* Connections:
-* TE:  Top electrode
-* BE:  Bottom electrode
-* XSV: External connection to plot state variable
-*      that is not used otherwise
+.SUBCKT MEMRISTOR PLUS MINUS PARAMS: RON=100 ROFF=10K P=2 J=1
 
-.SUBCKT MEM_JOGLEKAR TE BE XSV 
+* State variable w (normalized between 0 and 1)
+Vw w 0 DC 0.5 IC=0.5  ; Initial condition for w (0.5)
 
-* Ron: Minimum device resistance
-* Roff: Maximum device resistance
-* D:   Width of the thin film
-* uv:  Dopant mobility
-* p:   Parameter for window function
-* x0:   State variable initial value
+* Voltage across memristor
+Vmem PLUS N001 DC 0
 
-.params Ron=100 Roff=10K x0=.56 D=12N uv=50F p=7
+* Memristance equation
+Rmem N001 MINUS VALUE = { RON * V(w) + ROFF * (1 - V(w)) }
 
-* Joglekar Window Function
-.func f(V1) = 1-pow((2*V1-1),(2*p))
+* Joglekar window function
+Bw 0 w I = { J * I(Vmem) * (1 - (2*V(w) - 1)^(2*P) }
 
-* Memristor I-V Relationship
-.func IVRel(V1,V2) = V1/(Ron*V2 + Roff*(1-V2))
+* Clamp w between 0 and 1
+Bclamp w 0 V = { LIMIT(V(w), 0, 1) }
 
-* Circuit to determine state variable
-Gx 0 XSV value={ I(Gmem)*Ron*uv*f(V(XSV,0))/pow(D,2) }
-Cx XSV 0 {1}
-.ic V(XSV) = x0
+* Current through memristor
+Gmem MINUS PLUS VALUE = { V(PLUS, MINUS) / (RON * V(w) + ROFF * (1 - V(w))) }
 
-* Current source representing memristor
-Gmem TE BE value={IVRel(V(TE,BE),V(XSV,0))}
-
-.ENDS MEM_JOGLEKAR
+.ENDS MEMRISTOR
